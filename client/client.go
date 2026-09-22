@@ -128,17 +128,10 @@ func (c *Client) NewRequest(ctx context.Context, method, path string, body []byt
 	if c == nil || c.baseURL == nil {
 		return nil, fmt.Errorf("client: not initialized")
 	}
-	rel, err := url.Parse(path)
+	u, err := c.joinURL(path)
 	if err != nil {
-		return nil, fmt.Errorf("client: parse path %q: %w", path, err)
+		return nil, err
 	}
-	if rel.Scheme != "" || rel.Host != "" {
-		return nil, fmt.Errorf("client: path must be relative, got %q", path)
-	}
-	if rel.Path != "" && !strings.HasPrefix(rel.Path, "/") {
-		rel.Path = "/" + rel.Path
-	}
-	u := c.baseURL.ResolveReference(rel)
 
 	var rdr io.Reader
 	if len(body) > 0 {
@@ -265,6 +258,33 @@ func (c *Client) DoJSON(ctx context.Context, method, path string, dest any, opts
 		return sdkerr.Decode(resp.StatusCode, respBody, err)
 	}
 	return nil
+}
+
+// joinURL appends a relative API path (and optional query) onto the base URL.
+// A path starting with '/' does not replace a gateway prefix on the base URL
+// (unlike url.URL.ResolveReference).
+func (c *Client) joinURL(path string) (*url.URL, error) {
+	rel, err := url.Parse(path)
+	if err != nil {
+		return nil, fmt.Errorf("client: parse path %q: %w", path, err)
+	}
+	if rel.Scheme != "" || rel.Host != "" {
+		return nil, fmt.Errorf("client: path must be relative, got %q", path)
+	}
+
+	relPath := rel.Path
+	if relPath == "" {
+		relPath = "/"
+	} else if !strings.HasPrefix(relPath, "/") {
+		relPath = "/" + relPath
+	}
+
+	u := *c.baseURL
+	u.Path = strings.TrimSuffix(u.Path, "/") + relPath
+	u.RawPath = ""
+	u.RawQuery = rel.RawQuery
+	u.Fragment = rel.Fragment
+	return &u, nil
 }
 
 func (c *Client) setBaseURL(raw string) error {

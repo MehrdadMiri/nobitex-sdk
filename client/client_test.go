@@ -25,8 +25,9 @@ func TestNewDefaultBaseURL(t *testing.T) {
 	if got := c.BaseURL(); got != client.DefaultBaseURL {
 		t.Fatalf("BaseURL = %q, want %q", got, client.DefaultBaseURL)
 	}
-	if got := c.UserAgent(); got != "TraderBot/nobitex-sdk-0.1.0" {
-		t.Fatalf("UserAgent = %q", got)
+	wantUA := "TraderBot/" + client.DefaultAppName + "-" + client.DefaultAppVersion
+	if got := c.UserAgent(); got != wantUA {
+		t.Fatalf("UserAgent = %q, want %q", got, wantUA)
 	}
 }
 
@@ -264,6 +265,27 @@ func TestNewFromEnv(t *testing.T) {
 	}
 	if c.Auth() == nil {
 		t.Fatal("expected token auth from env")
+	}
+}
+
+func TestBaseURLPathPrefix(t *testing.T) {
+	t.Parallel()
+	var gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		_, _ = io.WriteString(w, `{"status":"ok"}`)
+	}))
+	defer srv.Close()
+
+	c, err := client.New(client.WithBaseURL(srv.URL + "/gateway"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.DoJSON(context.Background(), http.MethodGet, "/v3/orderbook/all", nil); err != nil {
+		t.Fatal(err)
+	}
+	if gotPath != "/gateway/v3/orderbook/all" {
+		t.Fatalf("path = %q", gotPath)
 	}
 }
 
