@@ -1,0 +1,52 @@
+{
+  "status": "ok",
+  "orders": [
+    {
+      "id": 29,
+      "type": "buy",
+      "execution": "Limit",
+      "tradeType": "Margin",
+      "srcCurrency": "btc",
+      "dstCurrency": "rls",
+      "price": "12600000000",
+      "amount": "0.01",
+      "status": "Active",
+      "totalPrice": "0",
+      "totalOrderPrice": "126000000",
+      "matchedAmount": "0",
+      "unmatchedAmount": "0.01",
+      "clientOrderId": "oco-buy-1",
+      "pairId": 30,
+      "leverage": "2",
+      "side": "open",
+      "partial": false,
+      "fee": "0",
+      "created_at": "2022-10-25T09:57:38.560820+00:00",
+      "averagePrice": "0"
+    },
+    {
+      "id": 30,
+      "type": "buy",
+      "execution": "StopLimit",
+      "tradeType": "Margin",
+      "srcCurrency": "btc",
+      "dstCurrency": "rls",
+      "price": "13610000000",
+      "amount": "0.01",
+      "status": "Inactive",
+      "totalPrice": "0",
+      "totalOrderPrice": "136100000",
+      "matchedAmount": "0",
+      "unmatchedAmount": "0.01",
+      "clientOrderId": null,
+      "param1": "13600000000",
+      "pairId": 29,
+      "leverage": "2",
+      "side": "open",
+      "partial": false,
+      "fee": "0",
+      "created_at": "2022-10-25T09:57:38.560820+00:00",
+      "averagePrice": "0"
+    }
+  ]
+}

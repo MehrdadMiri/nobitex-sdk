@@ -1,0 +1,25 @@
+{
+  "status": "ok",
+  "order": {
+    "id": 25,
+    "type": "sell",
+    "execution": "Limit",
+    "tradeType": "Margin",
+    "srcCurrency": "btc",
+    "dstCurrency": "rls",
+    "price": "6400000000",
+    "amount": "0.01",
+    "status": "Active",
+    "totalPrice": "0",
+    "totalOrderPrice": "64000000",
+    "matchedAmount": "0",
+    "unmatchedAmount": "0.01",
+    "clientOrderId": "my-order-123",
+    "leverage": "2",
+    "side": "open",
+    "partial": false,
+    "fee": "0",
+    "created_at": "2022-10-20T11:36:13.592827+00:00",
+    "averagePrice": "0"
+  }
+}
