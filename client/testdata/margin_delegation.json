@@ -1,0 +1,15 @@
+{
+  "status": "ok",
+  "limits": {
+    "sell": [
+      {"leverage": "1", "limit": "0.423"},
+      {"leverage": "2", "limit": "0.37"},
+      {"leverage": "5", "limit": "0.211"}
+    ],
+    "buy": [
+      {"leverage": "1", "limit": "476000000"},
+      {"leverage": "2", "limit": "416000000"},
+      {"leverage": "5", "limit": "238000000"}
+    ]
+  }
+}

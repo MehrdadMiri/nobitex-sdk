@@ -1,0 +1,9 @@
+{
+  "status": "ok",
+  "limitations": {
+    "userLevel": 1,
+    "features": {"trade": true, "withdraw": true},
+    "limits": {"withdrawRialDaily": "200000000"},
+    "depositLimits": {"shetabDaily": "50000000"}
+  }
+}

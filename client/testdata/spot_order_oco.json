@@ -1,0 +1,50 @@
+{
+  "status": "ok",
+  "orders": [
+    {
+      "id": 27,
+      "type": "buy",
+      "execution": "Limit",
+      "tradeType": "Spot",
+      "market": "BTC-USDT",
+      "srcCurrency": "Bitcoin",
+      "dstCurrency": "Tether",
+      "price": "42390",
+      "amount": "0.01",
+      "totalPrice": "0",
+      "totalOrderPrice": "423.9",
+      "matchedAmount": "0",
+      "unmatchedAmount": "0.01",
+      "status": "Active",
+      "partial": false,
+      "fee": "0",
+      "created_at": "2022-04-10T10:12:38.402795+00:00",
+      "averagePrice": "0",
+      "pairId": 28,
+      "clientOrderId": "order1"
+    },
+    {
+      "id": 28,
+      "type": "buy",
+      "execution": "StopLimit",
+      "tradeType": "Spot",
+      "market": "BTC-USDT",
+      "srcCurrency": "Bitcoin",
+      "dstCurrency": "Tether",
+      "price": "42715",
+      "amount": "0.01",
+      "param1": "42700",
+      "totalPrice": "0",
+      "totalOrderPrice": "427.15",
+      "matchedAmount": "0",
+      "unmatchedAmount": "0.01",
+      "status": "Inactive",
+      "partial": false,
+      "fee": "0",
+      "created_at": "2022-04-10T10:12:38.402795+00:00",
+      "averagePrice": "0",
+      "pairId": 27,
+      "clientOrderId": null
+    }
+  ]
+}

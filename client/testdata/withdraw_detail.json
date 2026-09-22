@@ -1,0 +1,17 @@
+{
+  "status": "ok",
+  "withdraw": {
+    "id": 432,
+    "createdAt": "2024-01-15T10:30:00Z",
+    "status": "Done",
+    "amount": "0.05000000",
+    "currency": "usdt",
+    "network": "ETH",
+    "address": "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B",
+    "tag": null,
+    "wallet_id": 3456,
+    "blockchain_url": "https://etherscan.io/tx/0xabc...",
+    "is_cancelable": false,
+    "invoice": null
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "status": "ok",
+  "wallets": {
+    "btc": {"id": 1234, "balance": "0.6", "blocked": "0.1"},
+    "rls": {"id": 99, "balance": "15000000", "blocked": "0"},
+    "usdt": {"id": 5678, "balance": "250.5", "blocked": "20"}
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "status": "ok",
+  "deposits": [
+    {
+      "txHash": "0xabc",
+      "address": "bc1qexample",
+      "confirmed": true,
+      "currency": "btc",
+      "amount": "0.01",
+      "wallet_id": 1234,
+      "blockchainUrl": "https://example.test/tx/0xabc"
+    }
+  ],
+  "hasNext": false
+}

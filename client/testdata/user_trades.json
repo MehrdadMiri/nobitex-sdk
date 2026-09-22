@@ -1,0 +1,19 @@
+{
+  "status": "ok",
+  "trades": [
+    {
+      "id": 123412,
+      "orderId": 1231222,
+      "srcCurrency": "Tether",
+      "dstCurrency": "﷼",
+      "market": "USDT-RLS",
+      "timestamp": "2022-07-05T09:57:38.560820+00:00",
+      "type": "sell",
+      "price": "316800",
+      "amount": "57.3605",
+      "total": "18171806.4",
+      "fee": "27257.7096"
+    }
+  ],
+  "hasNext": false
+}

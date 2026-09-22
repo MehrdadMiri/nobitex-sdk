@@ -4,7 +4,7 @@ Typed Go client for the [Nobitex API](https://apidocs.nobitex.ir) (`https://apiv
 
 Repository: https://github.com/MehrdadMiri/nobitex-sdk
 
-This module is the typed Go client for Tradex services: shared HTTP core (Token and API-key auth, `TraderBot/<name>-<version>` User-Agent, typed errors) plus **order book v3**, **system options / market precisions**, **margin order placement**, **positions list + close**, **user orders list** (including the margin trade-type filter), and **cancel order**.
+This module is the typed Go client for Tradex services: shared HTTP core (Token and API-key auth, `TraderBot/<name>-<version>` User-Agent, typed errors) plus **P0** market/margin fundamentals (including user orders list + cancel) and **P1** (nice-to-have) breadth across remaining practical docs categories.
 
 ## Status
 
@@ -23,6 +23,12 @@ This module is the typed Go client for Tradex services: shared HTTP core (Token 
 | Close position (`POST /positions/:positionId/close`) | Done |
 | User orders list (`GET`/`POST /market/orders/list`, margin filter) | Done |
 | Cancel order (`POST /market/orders/update-status`) | Done |
+| **P1** remaining market data (stats, trades, depth, OHLC) | Done |
+| **P1** user info (profile, wallets, balance, limitations, deposits) | Done |
+| **P1** spot helpers (place, status, user trades) | Done |
+| **P1** margin helpers (markets list, leverage/delegation, transfer) | Done |
+| **P1** withdrawals **read-only** (list + get) | Done |
+| **P1** WebSocket overview stub (URL + channel list, connection token) | Done |
 
 ## Install
 
@@ -161,10 +167,11 @@ API-key scopes (see [API key guide](https://apidocs.nobitex.ir/api_key/api-key-g
 
 | Call | API-key permission |
 |------|--------------------|
-| `GET`/`POST /market/orders/list` | **READ** |
+| `GET`/`POST /market/orders/list`, order status, user trades, profile/wallets/deposits/withdraws, WS token | **READ** |
 | `POST /market/orders/update-status` (cancel) | **TRADE** |
-| `POST /margin/orders/add` | **TRADE** |
+| `POST /margin/orders/add`, `POST /market/orders/add` | **TRADE** |
 | `GET /positions/list`, `POST /positions/:id/close` | **TRADE** |
+| `POST /wallets/transfer` (spot ↔ margin) | **TRADE** |
 
 Keys that place, close, or **cancel** orders need the **TRADE** permission. Timestamp must stay within ~30s of server time in production. The client always sends `User-Agent` and applies Token (`Authorization: Token …`) and/or API-key signing (`Nobitex-Key` / `Nobitex-Signature` / `Nobitex-Timestamp`) from the shared HTTP core. Missing credentials fail before any network call on authenticated endpoints.
 
@@ -264,14 +271,68 @@ _, err = c.CancelOrderByID(ctx, listed.Orders[0].ID)
 _, err = c.CancelOrderByClientOrderID(ctx, "my-order-123")
 ```
 
+## P1 — nice-to-have breadth
+
+Typed methods matching remaining official docs categories ([apidocs.nobitex.ir](https://apidocs.nobitex.ir)). Breadth over strategy logic. This is **not** a trading bot.
+
+### Remaining market data (public)
+
+- `Client.MarketStats` — `GET /market/stats` (optional `srcCurrency` / `dstCurrency`; 20/min). Lookup with `resp.Stat("BTCIRT")` (maps to `btc-rls`).
+- `Client.MarketTrades` — `GET /v2/trades/:symbol` (max 20; `all` unsupported; 60/min).
+- `Client.MarketDepth` — `GET /v2/depth/:symbol` (depth-chart levels; 300/min).
+- `Client.MarketOHLC` — `GET /market/udf/history` (TradingView UDF; max 500 candles; `h.Candles()`). `s=error` maps to a typed API error; `s=no_data` is success with no bars.
+
+### User info (auth, API-key **READ**)
+
+- `Client.UserProfile` — `GET /users/profile` (`profile.websocketAuthParam` for private WS names).
+- `Client.UserLimitations` — `POST /users/limitations`.
+- `Client.ListWallets` — `POST /users/wallets/list` (`type=spot|margin|credit|debit`).
+- `Client.ListWalletsV2` — `POST /v2/wallets` (selected currencies).
+- `Client.WalletBalance` — `POST /users/wallets/balance`.
+- `Client.ListDeposits` — `GET /users/wallets/deposits/list`.
+
+### Spot helpers (not list/cancel)
+
+- `Client.AddSpotOrder` — `POST /market/orders/add` (**TRADE**; limit / market / stop_limit / stop_market / oco). Helpers: `NewSpotLimitOrder`, `NewSpotMarketOrder`, `NewSpotStopLimitOrder`, `NewSpotStopMarketOrder`, `NewSpotOCOOrder`.
+- `Client.SpotOrderStatus` — `POST /market/orders/status` (**READ**; id or `clientOrderId`).
+- `Client.ListUserTrades` — `GET /market/trades/list` (**READ**; last 180 days). `srcCurrency`/`dstCurrency` must both be set or both empty.
+
+### Margin helpers
+
+- `Client.MarginMarkets` — `GET /margin/markets/list` (public without a token; a configured authenticator is sent so `maxLeverage` / delegation caps can personalize; `details=true` sends the documented JSON body).
+- `Client.MarginDelegationLimit` — `GET /margin/v2/delegation-limit?market=` (**READ**; remaining buy/sell capacity per leverage). `resp.LimitFor(side, leverage)`.
+- `Client.TransferWallet` / `TransferSpotToMargin` / `TransferMarginToSpot` — `POST /wallets/transfer` (spot ↔ margin).
+
+### Withdrawals (read-only)
+
+- `Client.ListWithdraws` — `GET /users/wallets/withdraws/list` (**READ**).
+- `Client.GetWithdraw` — `GET /withdraws/:withdrawId` (**READ**). Submit / confirm / cancel are out of scope.
+
+### WebSocket overview stub
+
+Not a subscriber. Docs: https://apidocs.nobitex.ir/websocket/%D9%88%D8%A8-%D8%B3%D9%88%DA%A9%D8%AA
+
+- `client.WebSocketOverview()` — production `wss://ws.nobitex.ir/connection/websocket`, testnet URL, token path, and public/private channel patterns.
+- Channel helpers: `types.PublicOrderBookChannel`, `PublicTradesChannel`, `PublicCandleChannel`, `PublicMarketStatsChannel`, `PrivateOrdersChannel`, `PrivateTradesChannel`.
+- `Client.WebSocketToken` — `GET /auth/ws/token/` (**READ**; JWT, 1200s). Combine with `profile.websocketAuthParam` as `private:{name}#{param}`.
+
+```go
+stats, _ := c.MarketStats(ctx, types.MarketStatsQuery{SrcCurrency: "btc", DstCurrency: "rls"})
+if st, ok := stats.Stat("BTCIRT"); ok {
+	log.Printf("latest=%s change=%v", types.MoneyValue(st.Latest), st.DayChange)
+}
+ov := client.WebSocketOverview()
+log.Printf("ws=%s orderbook=%s", ov.ProductionURL, types.PublicOrderBookChannel("BTCIRT"))
+```
+
 ## Package layout
 
 ```
 github.com/MehrdadMiri/nobitex-sdk
-├── client/   HTTP core, Do / DoJSON, OrderBook / OrderBookAll, SystemOptions, AddMarginOrder, ListPositions / ClosePosition, ListOrders / CancelOrder
+├── client/   HTTP core, Do / DoJSON, P0 endpoints, P1 market/user/spot/margin-helper/withdraw/WS-token methods
 ├── auth/     Token header + API-key Ed25519 signer; env loader
 ├── errors/   Typed transport + API error model
-└── types/    Envelope / status / money / order-book / system options / decimal-step / margin-order / positions list+close / user-order list+cancel
+└── types/    Envelope / money / P0 + P1 request/response shapes / WS channel helpers
 ```
 
 Stdlib only (no third-party dependencies).
@@ -280,7 +341,7 @@ Stdlib only (no third-party dependencies).
 
 1. Add request/response structs (new file or small domain package; money as `types.Money` / `string`, not `float64`).
 2. Add a method on `*client.Client` that calls `DoJSON` with the documented path and `WithJSONBody` / `WithQuery`.
-3. Use `WithoutAuth()` only for documented public routes (order book and system options already do this). Keep auth on for user/margin/position calls.
+3. Use `WithoutAuth()` only for documented public routes (order book, system options, remaining market data). Keep auth on for user/margin/position/withdraw calls. `MarginMarkets` sends auth when configured so the payload can personalize.
 4. Rely on existing error mapping — do not treat HTTP 200 as success without checking `status`.
 5. Cover the method with `httptest` + a recorded fixture; do **not** commit credentials.
 
@@ -294,18 +355,23 @@ Stdlib only (no third-party dependencies).
 6. `POST /market/orders/update-status` (cancel by id or `clientOrderId`, TRADE) (**done**)
 7. `GET /v2/options` (`amountPrecisions`, `pricePrecisions`) (**done**)
 
+## P1 endpoints (nice-to-have)
+
+Covered in this module (typed methods + fixture tests): remaining market data, user info, spot helpers, margin markets/leverage/transfer, withdrawals read-only, WebSocket overview stub. See the P1 section above. Docs: https://apidocs.nobitex.ir · repo: https://github.com/MehrdadMiri/nobitex-sdk
+
 ## Tests
 
 ```bash
 go test ./...
 ```
 
-Unit tests use `httptest` and recorded JSON fixtures. `TestOrderBookLivePublic` and `TestSystemOptionsLivePublic` optionally hit live public APIs (skipped with `-short`, and skipped if the network is down). Margin-order, positions, user-orders list, and cancel tests are fixture-only — **no authenticated live calls** and no real funds. No secrets in git.
+Unit tests use `httptest` and recorded JSON fixtures. `TestOrderBookLivePublic`, `TestSystemOptionsLivePublic`, and `TestMarketDataLivePublic` optionally hit live **public** APIs (skipped with `-short`, and skipped if the network is down). Authenticated P0/P1 methods (margin-order, positions, user-orders list/cancel, spot, user, withdraw, WS token) are fixture-only — **no authenticated live calls** in CI and no real funds. No secrets in git.
 
 ## Non-goals
 
-- Trading bot / strategy engine
+- Trading bot / strategy engine / full WebSocket subscriber
 - Storing secrets in git
+- Withdraw submit / confirm / cancel (P1 is read-only)
 
 ## License / ownership
 

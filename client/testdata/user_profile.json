@@ -1,0 +1,20 @@
+{
+  "status": "ok",
+  "profile": {
+    "email": "user@example.com",
+    "firstName": "Ali",
+    "lastName": "Rezaei",
+    "nationalCode": "0012345678",
+    "nickname": "trader",
+    "phone": "02112345678",
+    "mobile": "09121234567",
+    "verified": true,
+    "websocketAuthParam": "1987577cdf7c7422dee369e188e276ee",
+    "pendingWithdrawals": 0
+  },
+  "isBusinessAccount": false,
+  "tradeStats": {
+    "monthTrades": 12,
+    "monthVolume": "10000000"
+  }
+}

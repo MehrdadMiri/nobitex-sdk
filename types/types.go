@@ -2,8 +2,10 @@
 //
 // Common envelope/status/money types live here along with order book v3,
 // GET /v2/options shapes, decimal-step helpers, margin order
-// request/response types, position list/close types, and user-order
-// list/cancel shapes.
+// request/response types, position list/close types, user-order
+// list/cancel shapes, and P1 breadth coverage (remaining market data,
+// user info, spot helpers, margin helpers, read-only withdrawals, and a
+// WebSocket overview stub).
 package types
 
 // Status is the JSON "status" field used by most Nobitex HTTP APIs.

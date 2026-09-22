@@ -1,0 +1,26 @@
+{
+  "status": "ok",
+  "markets": {
+    "BTCIRT": {
+      "srcCurrency": "btc",
+      "dstCurrency": "rls",
+      "positionFeeRate": "0.0005",
+      "maxLeverage": "5",
+      "sellEnabled": true,
+      "buyEnabled": true
+    },
+    "BTCUSDT": {
+      "srcCurrency": "btc",
+      "dstCurrency": "usdt",
+      "positionFeeRate": "0.001",
+      "maxLeverage": "5",
+      "sellEnabled": true,
+      "buyEnabled": true,
+      "sellPositionFeeRate": "0.001",
+      "buyPositionFeeRate": "0.001",
+      "sellMaxDelegation": "100000",
+      "buyMaxDelegation": "100000",
+      "buyMaxDelegationInSrcCurrency": "0.002"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "status": "failed",
+  "code": "InvalidOrderPrice",
+  "message": "Price Validation Failed",
+  "clientOrderId": "order1"
+}
