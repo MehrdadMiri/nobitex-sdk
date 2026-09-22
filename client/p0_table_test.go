@@ -416,6 +416,8 @@ func TestREADMEUsageContract(t *testing.T) {
 		"CancelOrderByID",
 		"examples/orderbook",
 		"examples/margin",
+		"examples/market",
+		"MarketStats",
 	}
 	for _, n := range needles {
 		if !strings.Contains(s, n) {
