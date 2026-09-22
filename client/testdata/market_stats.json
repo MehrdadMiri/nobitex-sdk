@@ -1,0 +1,33 @@
+{
+  "status": "ok",
+  "stats": {
+    "btc-rls": {
+      "isClosed": false,
+      "bestSell": "199120111110",
+      "bestBuy": "199051704670",
+      "volumeSrc": "18.8125375739",
+      "volumeDst": "3685669284654.104056915",
+      "latest": "199079999990",
+      "mark": "199455904770",
+      "dayLow": "192500000000",
+      "dayHigh": "199400000000",
+      "dayOpen": "193000099960",
+      "dayClose": "199079999990",
+      "dayChange": "3.15"
+    },
+    "btc-usdt": {
+      "isClosed": false,
+      "bestSell": "9750.01",
+      "bestBuy": "9749.50",
+      "volumeSrc": "12.5",
+      "volumeDst": "121000",
+      "latest": "9750.00",
+      "mark": "9751.00",
+      "dayLow": "9600",
+      "dayHigh": "9900",
+      "dayOpen": "9700",
+      "dayClose": "9750.00",
+      "dayChange": "0.52"
+    }
+  }
+}

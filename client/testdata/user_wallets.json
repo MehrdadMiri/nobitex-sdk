@@ -1,0 +1,25 @@
+{
+  "status": "ok",
+  "wallets": [
+    {
+      "id": 1234,
+      "currency": "btc",
+      "balance": "0.6000000000",
+      "blockedBalance": "0.1000000000",
+      "activeBalance": "0.5000000000",
+      "rialBalance": 120000000000,
+      "rialBalanceSell": 119000000000,
+      "type": "spot"
+    },
+    {
+      "id": 5678,
+      "currency": "usdt",
+      "balance": "250.5000000000",
+      "blockedBalance": "20.0000000000",
+      "activeBalance": "230.5000000000",
+      "rialBalance": 728250000,
+      "rialBalanceSell": 730000000,
+      "type": "spot"
+    }
+  ]
+}

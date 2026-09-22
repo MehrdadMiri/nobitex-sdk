@@ -1,0 +1,23 @@
+{
+  "status": "ok",
+  "srcWallet": {
+    "id": 5678,
+    "currency": "usdt",
+    "balance": "250.5000000000",
+    "blockedBalance": "20.0000000000",
+    "activeBalance": "230.5000000000",
+    "rialBalance": 728250000,
+    "rialBalanceSell": 730000000,
+    "type": "margin"
+  },
+  "dstWallet": {
+    "id": 1234,
+    "currency": "usdt",
+    "balance": "85.7500000000",
+    "blockedBalance": "15.2500000000",
+    "activeBalance": "70.5000000000",
+    "rialBalance": 249750000,
+    "rialBalanceSell": 251000000,
+    "type": "spot"
+  }
+}
