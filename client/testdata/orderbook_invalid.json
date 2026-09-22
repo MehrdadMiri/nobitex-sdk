@@ -1,0 +1,5 @@
+{
+  "status": "failed",
+  "code": "InvalidSymbol",
+  "message": "The symbol \"NOPE\" is not a valid market pair."
+}
