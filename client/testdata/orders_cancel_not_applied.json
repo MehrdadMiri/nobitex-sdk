@@ -1,0 +1,25 @@
+{
+  "status": "failed",
+  "updatedStatus": "Done",
+  "order": {
+    "id": 5684,
+    "type": "sell",
+    "execution": "Market",
+    "tradeType": "Spot",
+    "market": "USDT-RLS",
+    "srcCurrency": "Tether",
+    "dstCurrency": "﷼",
+    "price": "market",
+    "amount": "60",
+    "totalPrice": "0",
+    "totalOrderPrice": "2550000",
+    "matchedAmount": "60",
+    "unmatchedAmount": "0",
+    "status": "Done",
+    "partial": false,
+    "fee": "0",
+    "created_at": "2025-10-28T09:25:17.774332+00:00",
+    "averagePrice": "42500",
+    "clientOrderId": null
+  }
+}

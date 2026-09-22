@@ -20,7 +20,7 @@ const positionsListPath = "/positions/list"
 //
 // Docs: https://apidocs.nobitex.ir
 func (c *Client) ListPositions(ctx context.Context, q types.PositionListQuery) (*types.PositionListResponse, error) {
-	if err := c.requireAuth("GET /positions/list"); err != nil {
+	if err := c.requireAuth("GET /positions/list", "TRADE"); err != nil {
 		return nil, err
 	}
 	norm, err := q.Normalize()
@@ -46,7 +46,7 @@ func (c *Client) ListPositions(ctx context.Context, q types.PositionListQuery) (
 //
 // Docs: https://apidocs.nobitex.ir
 func (c *Client) ClosePosition(ctx context.Context, positionID int64, req types.ClosePositionRequest) (*types.ClosePositionResponse, error) {
-	if err := c.requireAuth("POST /positions/:positionId/close"); err != nil {
+	if err := c.requireAuth("POST /positions/:positionId/close", "TRADE"); err != nil {
 		return nil, err
 	}
 	if positionID <= 0 {
@@ -61,16 +61,6 @@ func (c *Client) ClosePosition(ctx context.Context, positionID int64, req types.
 		return nil, err
 	}
 	return &out, nil
-}
-
-func (c *Client) requireAuth(op string) error {
-	if c == nil {
-		return fmt.Errorf("client: not initialized")
-	}
-	if c.Auth() == nil {
-		return fmt.Errorf("client: %s requires Token or API-key (TRADE) authentication", op)
-	}
-	return nil
 }
 
 func closePositionPath(positionID int64) string {

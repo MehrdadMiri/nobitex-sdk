@@ -1,0 +1,5 @@
+{
+  "status": "failed",
+  "code": "NullIdAndClientOrderId",
+  "message": "Both id and clientOrderId cannot be null"
+}

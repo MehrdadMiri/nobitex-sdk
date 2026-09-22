@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/MehrdadMiri/nobitex-sdk/types"
@@ -24,11 +23,8 @@ const marginOrdersAddPath = "/margin/orders/add"
 //
 // Docs: https://apidocs.nobitex.ir
 func (c *Client) AddMarginOrder(ctx context.Context, req types.MarginOrderRequest) (*types.MarginOrderAddResponse, error) {
-	if c == nil {
-		return nil, fmt.Errorf("client: not initialized")
-	}
-	if c.Auth() == nil {
-		return nil, fmt.Errorf("client: POST /margin/orders/add requires Token or API-key (TRADE) authentication")
+	if err := c.requireAuth("POST /margin/orders/add", "TRADE"); err != nil {
+		return nil, err
 	}
 	wire, err := req.Prepare()
 	if err != nil {
