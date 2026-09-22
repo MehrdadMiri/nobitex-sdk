@@ -417,7 +417,16 @@ func TestREADMEUsageContract(t *testing.T) {
 		"examples/orderbook",
 		"examples/margin",
 		"examples/market",
+		"examples/account",
 		"MarketStats",
+		"MarketDepth",
+		"MarketOHLC",
+		"UserProfile",
+		"ListWallets",
+		"ListWithdraws",
+		"WebSocketOverview",
+		"WebSocketToken",
+		"MarginMarkets",
 	}
 	for _, n := range needles {
 		if !strings.Contains(s, n) {

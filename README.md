@@ -27,7 +27,7 @@ Official docs: https://apidocs.nobitex.ir · Repository: https://github.com/Mehr
 | Cancel order (`POST /market/orders/update-status`) | Done |
 | README usage examples (public orderbook + env-token margin flow) | Done |
 | Table-driven unit tests for P0 parsers/clients | Done |
-| Compilable `examples/orderbook` + `examples/margin` + `examples/market` | Done |
+| Compilable `examples/` (orderbook, market, margin, account) | Done |
 | **P1** remaining market data (stats, trades, depth, OHLC) | Done |
 | **P1** user info (profile, wallets, balance, limitations, deposits) | Done |
 | **P1** spot helpers (place, status, user trades) | Done |
@@ -45,7 +45,12 @@ Go 1.22+.
 
 ## Usage
 
-Copy-paste examples below. Secrets come from the environment ([`.env.example`](.env.example)); never commit tokens. Runnable copies: [`examples/orderbook`](examples/orderbook) (public P0), [`examples/market`](examples/market) (public P1), and [`examples/margin`](examples/margin) (env token).
+Copy-paste examples below. Secrets come from the environment ([`.env.example`](.env.example)); never commit tokens. Runnable copies:
+
+- [`examples/orderbook`](examples/orderbook) — public P0 order book
+- [`examples/market`](examples/market) — public P1 market data + WS overview
+- [`examples/margin`](examples/margin) — env-token P0 margin flow (list by default)
+- [`examples/account`](examples/account) — env-token P1 **READ** (profile, wallets, withdraws, WS token)
 
 Official docs: https://apidocs.nobitex.ir · Repository: https://github.com/MehrdadMiri/nobitex-sdk
 
@@ -98,7 +103,7 @@ go run ./examples/orderbook
 
 ### P1 public market data (no token)
 
-`GET /market/stats` and `GET /v2/trades/:symbol` are public. P1 helpers that landed with PR #7.
+Remaining market data from PR #7: stats, trades, depth, OHLC, plus the WebSocket overview stub (no subscriber). `MarginMarkets` also works without a token.
 
 ```go
 package main
@@ -106,6 +111,7 @@ package main
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/MehrdadMiri/nobitex-sdk/client"
 	"github.com/MehrdadMiri/nobitex-sdk/types"
@@ -123,14 +129,32 @@ func main() {
 		log.Fatal(err)
 	}
 	if st, ok := stats.Stat("BTCIRT"); ok {
-		log.Printf("BTCIRT latest=%s change=%v", types.MoneyValue(st.Latest), st.DayChange)
+		log.Printf("latest=%s change=%v", types.MoneyValue(st.Latest), st.DayChange)
 	}
 
 	trades, err := c.MarketTrades(ctx, "BTCIRT")
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("BTCIRT trades=%d", len(trades.Trades))
+	log.Printf("trades=%d", len(trades.Trades))
+
+	depth, err := c.MarketDepth(ctx, "BTCIRT")
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("depth bids=%d asks=%d", len(depth.Bids), len(depth.Asks))
+
+	ohlc, err := c.MarketOHLC(ctx, types.UDFHistoryQuery{
+		Symbol: "BTCIRT", Resolution: types.Resolution60m,
+		To: time.Now().Unix(), Countback: 3,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("ohlc bars=%d", len(ohlc.Candles()))
+
+	ov := client.WebSocketOverview()
+	log.Printf("ws=%s channel=%s", ov.ProductionURL, types.PublicOrderBookChannel("BTCIRT"))
 }
 ```
 
@@ -138,7 +162,62 @@ func main() {
 go run ./examples/market
 ```
 
-Authenticated P1 **READ** (profile, wallets, withdraws list) uses the same `NewFromEnv` constructor as the margin flow; see the P1 section below. No TRADE / no funds.
+P1 **TRADE** helpers (`AddSpotOrder`, `TransferWallet`) are not run in examples. Use the same env-token constructor as margin; they move funds.
+
+### Authenticated P1 READ (env token)
+
+API-key **READ** (or session token). No orders, no transfers, no withdraw submit.
+
+```go
+package main
+
+import (
+	"context"
+	"log"
+
+	"github.com/MehrdadMiri/nobitex-sdk/client"
+	"github.com/MehrdadMiri/nobitex-sdk/types"
+)
+
+func main() {
+	c, err := client.NewFromEnv(client.WithApp("MyBot", "1.0.0"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	if c.Auth() == nil {
+		log.Fatal("set NOBITEX_TOKEN or NOBITEX_API_KEY+NOBITEX_API_SECRET")
+	}
+	ctx := context.Background()
+
+	profile, err := c.UserProfile(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	wallets, err := c.ListWallets(ctx, types.WalletListRequest{Type: types.WalletSpot})
+	if err != nil {
+		log.Fatal(err)
+	}
+	withdraws, err := c.ListWithdraws(ctx, types.WithdrawListQuery{PageSize: 10})
+	if err != nil {
+		log.Fatal(err)
+	}
+	tok, err := c.WebSocketToken(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := tok.ValidateToken(); err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("nick=%s wallets=%d withdraws=%d private=%s",
+		profile.Profile.DisplayNickname(), len(wallets.Wallets), len(withdraws.Withdraws),
+		types.PrivateOrdersChannel(profile.Profile.WebsocketAuthParam))
+}
+```
+
+```bash
+export NOBITEX_TOKEN=  # paste locally; never commit
+go run ./examples/account
+```
 
 ### Authenticated margin flow (env token)
 
@@ -414,7 +493,7 @@ github.com/MehrdadMiri/nobitex-sdk
 ├── auth/       Token header + API-key Ed25519 signer; env loader
 ├── errors/     Typed transport + API error model
 ├── types/      Envelope / money / P0 + P1 request/response shapes / WS channel helpers
-└── examples/   Compilable usage: public orderbook, public market stats, env-token margin flow
+└── examples/   Compilable usage: public orderbook + market data, env-token margin, P1 READ account
 ```
 
 Stdlib only (no third-party dependencies).
@@ -449,7 +528,7 @@ go test -short ./...          # skip optional live public calls
 go test -race -short ./...
 ```
 
-Unit tests are table-driven where it helps (P0 parsers, query encoding, auth-required methods, `errors.Check`). They use `httptest` and recorded JSON fixtures. `go test` also `go build`s [`examples/orderbook`](examples/orderbook), [`examples/margin`](examples/margin), and [`examples/market`](examples/market) — those programs are not executed against the live API in tests.
+Unit tests are table-driven where it helps (P0 parsers, query encoding, auth-required methods, `errors.Check`). They use `httptest` and recorded JSON fixtures. `go test` also `go build`s [`examples/orderbook`](examples/orderbook), [`examples/margin`](examples/margin), [`examples/market`](examples/market), and [`examples/account`](examples/account) — those programs are not executed against the live API in tests.
 
 `TestOrderBookLivePublic`, `TestSystemOptionsLivePublic`, and `TestMarketDataLivePublic` optionally hit live **public** APIs (skipped with `-short`, and skipped if the network is down). Authenticated P0/P1 methods (margin-order, positions, user-orders list/cancel, spot, user, withdraw, WS token) are fixture-only — **no authenticated live calls** in CI and no real funds. `examples/margin` lists by default; place/cancel require `NOBITEX_EXAMPLE_TRADE=1`. No secrets in git.
 
