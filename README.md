@@ -6,6 +6,8 @@ Repository: https://github.com/MehrdadMiri/nobitex-sdk
 
 This module is the typed Go client for Tradex services: shared HTTP core (Token and API-key auth, `TraderBot/<name>-<version>` User-Agent, typed errors) plus **P0** market/margin fundamentals (including user orders list + cancel) and **P1** (nice-to-have) breadth across remaining practical docs categories.
 
+Official docs: https://apidocs.nobitex.ir · Repository: https://github.com/MehrdadMiri/nobitex-sdk
+
 ## Status
 
 | Area | Status |
@@ -23,6 +25,9 @@ This module is the typed Go client for Tradex services: shared HTTP core (Token 
 | Close position (`POST /positions/:positionId/close`) | Done |
 | User orders list (`GET`/`POST /market/orders/list`, margin filter) | Done |
 | Cancel order (`POST /market/orders/update-status`) | Done |
+| README usage examples (public orderbook + env-token margin flow) | Done |
+| Table-driven unit tests for P0 parsers/clients | Done |
+| Compilable `examples/orderbook` + `examples/margin` | Done |
 | **P1** remaining market data (stats, trades, depth, OHLC) | Done |
 | **P1** user info (profile, wallets, balance, limitations, deposits) | Done |
 | **P1** spot helpers (place, status, user trades) | Done |
@@ -38,7 +43,15 @@ go get github.com/MehrdadMiri/nobitex-sdk
 
 Go 1.22+.
 
-## Quick start
+## Usage
+
+Copy-paste examples below. Secrets come from the environment ([`.env.example`](.env.example)); never commit tokens. Runnable copies: [`examples/orderbook`](examples/orderbook) (public) and [`examples/margin`](examples/margin) (env token).
+
+Official docs: https://apidocs.nobitex.ir · Repository: https://github.com/MehrdadMiri/nobitex-sdk
+
+### Public order book (no token)
+
+`GET /v3/orderbook/:symbol` is public (300 req/min). No `NOBITEX_TOKEN` required.
 
 ```go
 package main
@@ -46,10 +59,8 @@ package main
 import (
 	"context"
 	"log"
-	"os"
 
 	"github.com/MehrdadMiri/nobitex-sdk/client"
-	"github.com/MehrdadMiri/nobitex-sdk/types"
 )
 
 func main() {
@@ -62,7 +73,6 @@ func main() {
 
 	ctx := context.Background()
 
-	// Public: no token. Specific market (asks/bids are [price, amount] strings).
 	book, err := c.OrderBook(ctx, "BTCIRT")
 	if err != nil {
 		log.Fatal(err)
@@ -72,7 +82,6 @@ func main() {
 		log.Printf("best bid %s x %s", book.Bids[0].Price, book.Bids[0].Amount)
 	}
 
-	// Public: consolidated books for every market.
 	all, err := c.OrderBookAll(ctx)
 	if err != nil {
 		log.Fatal(err)
@@ -80,49 +89,71 @@ func main() {
 	if btc, ok := all.Book("BTCIRT"); ok {
 		log.Printf("all-markets BTCIRT last=%s", btc.LastTradePrice)
 	}
+}
+```
 
-	// Public: market amount/price steps for later order decimal validation.
-	opts, err := c.SystemOptions(ctx)
+```bash
+go run ./examples/orderbook
+```
+
+### Authenticated margin flow (env token)
+
+Load `NOBITEX_TOKEN` (or `NOBITEX_API_KEY` + `NOBITEX_API_SECRET` with **TRADE**). Placeholders only — never hardcode secrets. `client.NewFromEnv` is the supported constructor.
+
+```go
+package main
+
+import (
+	"context"
+	"log"
+
+	"github.com/MehrdadMiri/nobitex-sdk/client"
+	"github.com/MehrdadMiri/nobitex-sdk/types"
+)
+
+func main() {
+	c, err := client.NewFromEnv(client.WithApp("MyBot", "1.0.0"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	amount, _ := opts.AmountPrecision("BTCIRT")
-	price, _ := opts.PricePrecision("BTCIRT")
-	log.Printf("BTCIRT amount step=%s price step=%s", amount, price)
-	if err := opts.ValidateOrderDecimals("BTCIRT", "0.001", "35650565900"); err != nil {
-		log.Fatal(err)
+	if c.Auth() == nil {
+		log.Fatal("set NOBITEX_TOKEN or NOBITEX_API_KEY+NOBITEX_API_SECRET")
 	}
 
-	// Authenticated: Token header (or API-key TRADE signing). Load secrets from env.
-	authed, err := client.New(
-		client.WithApp("MyBot", "1.0.0"),
-		client.WithToken(os.Getenv("NOBITEX_TOKEN")),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	placed, err := authed.AddMarginOrder(ctx, types.NewMarginLimitOrder(
+	ctx := context.Background()
+
+	placed, err := c.AddMarginOrder(ctx, types.NewMarginLimitOrder(
 		types.OrderSideSell, "btc", "usdt", "0.01", "13400000000",
 	))
 	if err != nil {
 		log.Fatal(err)
 	}
 	for _, o := range placed.PlacedOrders() {
-		log.Printf("margin order id=%d clientOrderId=%s", o.ID, o.ClientOrderIDValue())
+		log.Printf("placed id=%d clientOrderId=%s", o.ID, o.ClientOrderIDValue())
 	}
 
-	// Authenticated READ: list margin orders (details=2 so ids are present).
-	listed, err := authed.ListMarginOrders(ctx, types.OrderListQuery{Details: types.OrderListDetailsFull})
+	positions, err := c.ListPositions(ctx, types.PositionListQuery{
+		SrcCurrency: "btc",
+		Status:      types.PositionListActive,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("open positions=%d", len(positions.Positions))
+
+	listed, err := c.ListMarginOrders(ctx, types.OrderListQuery{
+		Status:  types.OrderListStatusOpen,
+		Details: types.OrderListDetailsFull,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 	for _, o := range listed.Orders {
-		log.Printf("open margin order id=%d clientOrderId=%s", o.ID, o.ClientOrderIDValue())
+		log.Printf("margin order id=%d clientOrderId=%s", o.ID, o.ClientOrderIDValue())
 	}
 
-	// Authenticated TRADE: cancel by server id or by clientOrderId.
 	if len(listed.Orders) > 0 {
-		canceled, err := authed.CancelOrderByID(ctx, listed.Orders[0].ID)
+		canceled, err := c.CancelOrderByID(ctx, listed.Orders[0].ID)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -131,7 +162,13 @@ func main() {
 }
 ```
 
-Construct without the environment:
+```bash
+export NOBITEX_TOKEN=  # paste locally; never commit
+go run ./examples/margin                 # lists only (no funds)
+NOBITEX_EXAMPLE_TRADE=1 go run ./examples/margin  # place + cancel (real funds)
+```
+
+Construct without `NewFromEnv`:
 
 ```go
 c, err := client.New(
@@ -329,10 +366,11 @@ log.Printf("ws=%s orderbook=%s", ov.ProductionURL, types.PublicOrderBookChannel(
 
 ```
 github.com/MehrdadMiri/nobitex-sdk
-├── client/   HTTP core, Do / DoJSON, P0 endpoints, P1 market/user/spot/margin-helper/withdraw/WS-token methods
-├── auth/     Token header + API-key Ed25519 signer; env loader
-├── errors/   Typed transport + API error model
-└── types/    Envelope / money / P0 + P1 request/response shapes / WS channel helpers
+├── client/     HTTP core, Do / DoJSON, P0 endpoints, P1 market/user/spot/margin-helper/withdraw/WS-token methods
+├── auth/       Token header + API-key Ed25519 signer; env loader
+├── errors/     Typed transport + API error model
+├── types/      Envelope / money / P0 + P1 request/response shapes / WS channel helpers
+└── examples/   Compilable usage: public orderbook + env-token margin flow
 ```
 
 Stdlib only (no third-party dependencies).
@@ -363,9 +401,13 @@ Covered in this module (typed methods + fixture tests): remaining market data, u
 
 ```bash
 go test ./...
+go test -short ./...          # skip optional live public calls
+go test -race -short ./...
 ```
 
-Unit tests use `httptest` and recorded JSON fixtures. `TestOrderBookLivePublic`, `TestSystemOptionsLivePublic`, and `TestMarketDataLivePublic` optionally hit live **public** APIs (skipped with `-short`, and skipped if the network is down). Authenticated P0/P1 methods (margin-order, positions, user-orders list/cancel, spot, user, withdraw, WS token) are fixture-only — **no authenticated live calls** in CI and no real funds. No secrets in git.
+Unit tests are table-driven where it helps (P0 parsers, query encoding, auth-required methods, `errors.Check`). They use `httptest` and recorded JSON fixtures. `go test` also `go build`s [`examples/orderbook`](examples/orderbook) and [`examples/margin`](examples/margin) — those programs are not executed against the live API in tests.
+
+`TestOrderBookLivePublic`, `TestSystemOptionsLivePublic`, and `TestMarketDataLivePublic` optionally hit live **public** APIs (skipped with `-short`, and skipped if the network is down). Authenticated P0/P1 methods (margin-order, positions, user-orders list/cancel, spot, user, withdraw, WS token) are fixture-only — **no authenticated live calls** in CI and no real funds. `examples/margin` lists by default; place/cancel require `NOBITEX_EXAMPLE_TRADE=1`. No secrets in git.
 
 ## Non-goals
 
