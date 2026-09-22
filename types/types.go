@@ -1,8 +1,8 @@
 // Package types holds shared request/response shapes used across the SDK.
 //
-// Common envelope/status/money types live here along with P0 market-data
-// shapes (order book v3). Margin, positions, and options structs belong in
-// follow-up tickets.
+// Common envelope/status/money types live here along with order book v3,
+// GET /v2/options shapes, and decimal-step helpers for order validation.
+// Margin and position structs belong in follow-up tickets.
 package types
 
 // Status is the JSON "status" field used by most Nobitex HTTP APIs.

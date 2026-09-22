@@ -4,7 +4,7 @@ Typed Go client for the [Nobitex API](https://apidocs.nobitex.ir) (`https://apiv
 
 Repository: https://github.com/MehrdadMiri/nobitex-sdk
 
-This module is the typed Go client for Tradex services: shared HTTP core (Token and API-key auth, `TraderBot/<name>-<version>` User-Agent, typed errors) plus **order book v3**. Margin orders, positions, cancel, and system options land in follow-up tickets.
+This module is the typed Go client for Tradex services: shared HTTP core (Token and API-key auth, `TraderBot/<name>-<version>` User-Agent, typed errors) plus **order book v3** and **system options / market precisions**. Margin orders, positions, and cancel land in follow-up tickets.
 
 ## Status
 
@@ -17,7 +17,8 @@ This module is the typed Go client for Tradex services: shared HTTP core (Token 
 | Typed transport + API errors (`status=failed`, HTTP 4xx/5xx, `backOff`) | Done |
 | Env/config secrets (nothing hardcoded) | Done |
 | Order book v3 (`GET /v3/orderbook/:symbol`, including `all`) | Done |
-| Margin / positions / cancel / options methods | **Out of scope** — follow-up PRs |
+| System options / market precisions (`GET /v2/options`) | Done |
+| Margin / positions / cancel | **Out of scope** — follow-up PRs |
 
 ## Install
 
@@ -66,6 +67,18 @@ func main() {
 	}
 	if btc, ok := all.Book("BTCIRT"); ok {
 		log.Printf("all-markets BTCIRT last=%s", btc.LastTradePrice)
+	}
+
+	// Public: market amount/price steps for later order decimal validation.
+	opts, err := c.SystemOptions(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	amount, _ := opts.AmountPrecision("BTCIRT")
+	price, _ := opts.PricePrecision("BTCIRT")
+	log.Printf("BTCIRT amount step=%s price step=%s", amount, price)
+	if err := opts.ValidateOrderDecimals("BTCIRT", "0.001", "35650565900"); err != nil {
+		log.Fatal(err)
 	}
 }
 ```
@@ -138,14 +151,22 @@ Public `GET /v3/orderbook/:symbol` (no token, 300 req/min). Docs: https://apidoc
 
 Market symbols are uppercased; `all` stays lowercase (the API rejects `ALL`).
 
+## System options / market precisions
+
+Public `GET /v2/options` (no token). Docs: https://apidocs.nobitex.ir/options/get-system-options
+
+- `Client.SystemOptions(ctx)` reuses the shared HTTP client (`User-Agent`, typed errors, `WithoutAuth`).
+- Response exposes `nobitex.amountPrecisions` and `nobitex.pricePrecisions` (smallest allowed amount / price increment per market, e.g. BTCIRT).
+- Helpers for later order-placement code: `AmountPrecision` / `PricePrecision`, `ValidateAmount` / `ValidatePrice` / `ValidateOrderDecimals`, and `Money.FitsStep` / `TruncateToStep`.
+
 ## Package layout
 
 ```
 github.com/MehrdadMiri/nobitex-sdk
-├── client/   HTTP core, options, Do / DoJSON, OrderBook / OrderBookAll
+├── client/   HTTP core, Do / DoJSON, OrderBook / OrderBookAll, SystemOptions
 ├── auth/     Token header + API-key Ed25519 signer; env loader
 ├── errors/   Typed transport + API error model
-└── types/    Envelope / status / money / order-book shapes
+└── types/    Envelope / status / money / order-book / system options / decimal-step helpers
 ```
 
 Stdlib only (no third-party dependencies).
@@ -154,7 +175,7 @@ Stdlib only (no third-party dependencies).
 
 1. Add request/response structs (new file or small domain package; money as `types.Money` / `string`, not `float64`).
 2. Add a method on `*client.Client` that calls `DoJSON` with the documented path and `WithJSONBody` / `WithQuery`.
-3. Use `WithoutAuth()` only for documented public routes (order book already does this). Keep auth on for user/margin/position calls.
+3. Use `WithoutAuth()` only for documented public routes (order book and system options already do this). Keep auth on for user/margin/position calls.
 4. Rely on existing error mapping — do not treat HTTP 200 as success without checking `status`.
 5. Cover the method with `httptest` + a recorded fixture; do **not** commit credentials.
 
@@ -166,7 +187,7 @@ Stdlib only (no third-party dependencies).
 4. `POST /positions/:positionId/close` — next
 5. `GET`/`POST /market/orders/list` (margin filter) — next
 6. `POST /market/orders/update-status` (cancel) — next
-7. `GET /v2/options` (`amountPrecisions`, `pricePrecisions`) — next
+7. `GET /v2/options` (`amountPrecisions`, `pricePrecisions`) (**done**)
 
 ## Tests
 
@@ -174,13 +195,13 @@ Stdlib only (no third-party dependencies).
 go test ./...
 ```
 
-Unit tests use `httptest` and recorded JSON fixtures. `TestOrderBookLivePublic` optionally hits the live public order-book API (skipped with `-short`, and skipped if the network is down). No authenticated live calls; no secrets in git.
+Unit tests use `httptest` and recorded JSON fixtures. `TestOrderBookLivePublic` and `TestSystemOptionsLivePublic` optionally hit live public APIs (skipped with `-short`, and skipped if the network is down). No authenticated live calls; no secrets in git.
 
 ## Non-goals
 
 - Trading bot / strategy engine
 - Storing secrets in git
-- Margin / positions / cancel / options in this PR
+- Margin / positions / cancel in this PR
 
 ## License / ownership
 

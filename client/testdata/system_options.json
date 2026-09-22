@@ -1,0 +1,55 @@
+{
+  "status": "ok",
+  "features": {
+    "fcmEnabled": true,
+    "chat": "enabled",
+    "walletsToNet": true,
+    "autoKYC": true,
+    "enabledFeatures": ["feature1", "feature2"],
+    "betaFeatures": ["beta1"]
+  },
+  "coins": [
+    {
+      "coin": "rls",
+      "name": "Rial",
+      "defaultNetwork": "FIAT_MONEY",
+      "displayPrecision": "10",
+      "stdName": "﷼",
+      "networkList": {
+        "FIAT_MONEY": {
+          "network": "FIAT_MONEY",
+          "name": "FIAT",
+          "isDefault": true,
+          "beta": false,
+          "depositEnable": true,
+          "minConfirm": 0,
+          "withdrawEnable": true
+        }
+      }
+    }
+  ],
+  "nobitex": {
+    "allCurrencies": ["btc", "eth", "usdt"],
+    "activeCurrencies": ["btc", "eth", "usdt"],
+    "topCurrencies": ["btc"],
+    "minOrders": {
+      "rls": "500000",
+      "usdt": "0.5"
+    },
+    "amountPrecisions": {
+      "BTCIRT": "0.000001",
+      "BTCUSDT": "0.000001",
+      "ETHIRT": "0.00001",
+      "DOGEUSDT": "1"
+    },
+    "pricePrecisions": {
+      "BTCIRT": "10",
+      "BTCUSDT": "0.01",
+      "ETHIRT": "10",
+      "DOGEUSDT": "0.0000001"
+    },
+    "giftCard": {
+      "physicalFee": "360000"
+    }
+  }
+}
