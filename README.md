@@ -4,7 +4,7 @@ Typed Go client for the [Nobitex API](https://apidocs.nobitex.ir) (`https://apiv
 
 Repository: https://github.com/MehrdadMiri/nobitex-sdk
 
-This module is the typed Go client for Tradex services: shared HTTP core (Token and API-key auth, `TraderBot/<name>-<version>` User-Agent, typed errors) plus **order book v3**, **system options / market precisions**, and **margin order placement**. Positions and cancel land in follow-up tickets.
+This module is the typed Go client for Tradex services: shared HTTP core (Token and API-key auth, `TraderBot/<name>-<version>` User-Agent, typed errors) plus **order book v3**, **system options / market precisions**, **margin order placement**, and **positions list + close**. Cancel lands in a follow-up ticket.
 
 ## Status
 
@@ -19,7 +19,9 @@ This module is the typed Go client for Tradex services: shared HTTP core (Token 
 | Order book v3 (`GET /v3/orderbook/:symbol`, including `all`) | Done |
 | System options / market precisions (`GET /v2/options`) | Done |
 | Place margin order (`POST /margin/orders/add`) | Done |
-| Positions / cancel | **Out of scope** — follow-up PRs |
+| Positions list (`GET /positions/list`) | Done |
+| Close position (`POST /positions/:positionId/close`) | Done |
+| Cancel | **Out of scope** — follow-up PRs |
 
 ## Install
 
@@ -197,14 +199,30 @@ req.ClientOrderID = "my-order-123"
 resp, err := c.AddMarginOrder(ctx, req)
 ```
 
+## Positions list + close
+
+Authenticated (Token and/or API-key with **TRADE**). Docs: https://apidocs.nobitex.ir
+
+- `Client.ListPositions(ctx, types.PositionListQuery{...})` — `GET /positions/list`. Query filters: `srcCurrency`, `dstCurrency`, `status` (`active` | `past`; API default `active`), `page`, `pageSize` (default 50). Each row includes the position `id` and `status` (`Open` / `Closed` / `Liquidated` / `Expired`) Tradex needs, plus entry/exit prices, liability, and PNL fields.
+- `Client.ClosePosition(ctx, positionID, req)` — `POST /positions/:positionId/close`. Opposite-side close (sell position → buy order, buy position → sell order). Executions: `limit` / `market` / `stop_limit` / `stop_market` / `oco` (OCO is sent as documented `execution=limit` + `mode=oco`). Helpers: `NewCloseLimitOrder`, `NewCloseMarketOrder`, `NewCloseStopLimitOrder`, `NewCloseStopMarketOrder`, `NewCloseOCOOrder`.
+- Both methods reuse the shared HTTP client (User-Agent, Token / API-key signing, typed errors). Missing credentials fail before any network call.
+
+```go
+list, err := c.ListPositions(ctx, types.PositionListQuery{
+	SrcCurrency: "btc",
+	Status:      types.PositionListActive,
+})
+closeResp, err := c.ClosePosition(ctx, 128, types.NewCloseLimitOrder("0.0100150225", "6200000000"))
+```
+
 ## Package layout
 
 ```
 github.com/MehrdadMiri/nobitex-sdk
-├── client/   HTTP core, Do / DoJSON, OrderBook / OrderBookAll, SystemOptions, AddMarginOrder
+├── client/   HTTP core, Do / DoJSON, OrderBook / OrderBookAll, SystemOptions, AddMarginOrder, ListPositions / ClosePosition
 ├── auth/     Token header + API-key Ed25519 signer; env loader
 ├── errors/   Typed transport + API error model
-└── types/    Envelope / status / money / order-book / system options / decimal-step / margin-order shapes
+└── types/    Envelope / status / money / order-book / system options / decimal-step / margin-order / positions list+close
 ```
 
 Stdlib only (no third-party dependencies).
@@ -221,8 +239,8 @@ Stdlib only (no third-party dependencies).
 
 1. `GET /v3/orderbook/:symbol` — including `symbol=all` (**done**)
 2. `POST /margin/orders/add` — limit / market / stop_limit / stop_market / oco (**done**)
-3. `GET /positions/list` — next
-4. `POST /positions/:positionId/close` — next
+3. `GET /positions/list` (**done**)
+4. `POST /positions/:positionId/close` (**done**)
 5. `GET`/`POST /market/orders/list` (margin filter) — next
 6. `POST /market/orders/update-status` (cancel) — next
 7. `GET /v2/options` (`amountPrecisions`, `pricePrecisions`) (**done**)
@@ -233,13 +251,13 @@ Stdlib only (no third-party dependencies).
 go test ./...
 ```
 
-Unit tests use `httptest` and recorded JSON fixtures. `TestOrderBookLivePublic` and `TestSystemOptionsLivePublic` optionally hit live public APIs (skipped with `-short`, and skipped if the network is down). Margin-order tests are fixture-only — **no authenticated live calls** and no real funds. No secrets in git.
+Unit tests use `httptest` and recorded JSON fixtures. `TestOrderBookLivePublic` and `TestSystemOptionsLivePublic` optionally hit live public APIs (skipped with `-short`, and skipped if the network is down). Margin-order and positions list/close tests are fixture-only — **no authenticated live calls** and no real funds. No secrets in git.
 
 ## Non-goals
 
 - Trading bot / strategy engine
 - Storing secrets in git
-- Positions / cancel in this PR
+- Cancel in this PR
 
 ## License / ownership
 

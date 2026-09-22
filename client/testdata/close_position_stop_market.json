@@ -1,0 +1,25 @@
+{
+  "status": "ok",
+  "order": {
+    "id": 53,
+    "type": "sell",
+    "execution": "StopMarket",
+    "tradeType": "Margin",
+    "srcCurrency": "btc",
+    "dstCurrency": "rls",
+    "price": "market",
+    "amount": "0.0100150225",
+    "status": "Inactive",
+    "totalPrice": "0",
+    "totalOrderPrice": "0",
+    "matchedAmount": "0",
+    "unmatchedAmount": "0.0100150225",
+    "param1": "6100000000",
+    "leverage": "2",
+    "side": "close",
+    "partial": false,
+    "fee": "0",
+    "created_at": "2022-10-25T09:58:20.000000+00:00",
+    "averagePrice": "0"
+  }
+}

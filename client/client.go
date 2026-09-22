@@ -2,8 +2,8 @@
 //
 // It owns base URL, User-Agent, auth application, and error mapping. Typed
 // endpoint methods call DoJSON / Do. Order book v3, SystemOptions
-// (GET /v2/options), and margin order placement are implemented here;
-// positions and cancel land in follow-up tickets.
+// (GET /v2/options), margin order placement, and positions list/close
+// are implemented here; cancel lands in a follow-up ticket.
 package client
 
 import (
