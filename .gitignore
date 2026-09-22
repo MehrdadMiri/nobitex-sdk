@@ -1,0 +1,20 @@
+# Binaries and test artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+bin/
+
+# Secrets — never commit tokens or keys
+.env
+.env.*
+!.env.example
+
+# Editor / OS noise
+.idea/
+.vscode/
+*.swp
+.DS_Store
