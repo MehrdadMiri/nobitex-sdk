@@ -83,9 +83,8 @@ const (
 	CloseExecutionResponseStopMarket = "StopMarket"
 )
 
-// Close order tradeType / order status / position-open-vs-close side as returned
-// by POST /positions/:id/close. Kept local to this file so this PR does not
-// depend on unmerged margin-order types.
+// Close order tradeType / order status / open-vs-close side as returned by
+// POST /positions/:id/close (independent of margin-order-place types).
 const (
 	CloseTradeTypeMargin     = "Margin"
 	CloseOrderStatusNew      = "New"
