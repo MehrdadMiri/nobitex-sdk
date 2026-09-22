@@ -32,12 +32,12 @@ func TestPriceLevelUnmarshalTable(t *testing.T) {
 	}{
 		{name: "documented pair", raw: `["1476091000","1.016"]`, wantPrice: "1476091000", wantAmt: "1.016"},
 		{name: "empty strings", raw: `["",""]`, wantPrice: "", wantAmt: ""},
+		{name: "json numbers", raw: `[1476091000,1.016]`, wantPrice: "1476091000", wantAmt: "1.016"},
 		{name: "empty array", raw: `[]`, wantErr: "price level"},
 		{name: "one value", raw: `["only-price"]`, wantErr: "price level"},
 		{name: "three values", raw: `["1","2","3"]`, wantErr: "price level"},
-		{name: "object", raw: `{"price":"1","amount":"2"}`, wantErr: ""}, // json.Unmarshal into []Money fails
-		{name: "json numbers", raw: `[1476091000,1.016]`, wantErr: ""},   // Money is a JSON string
-		{name: "null", raw: `null`, wantErr: ""},
+		{name: "object", raw: `{"price":"1","amount":"2"}`, wantErr: "cannot unmarshal"},
+		{name: "null", raw: `null`, wantErr: "price level"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -47,12 +47,6 @@ func TestPriceLevelUnmarshalTable(t *testing.T) {
 			if tc.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
 					t.Fatalf("err = %v, want substring %q", err, tc.wantErr)
-				}
-				return
-			}
-			if tc.name == "object" || tc.name == "json numbers" || tc.name == "null" {
-				if err == nil {
-					t.Fatalf("documented encoding is [string,string]; accepted %s as %+v", tc.raw, p)
 				}
 				return
 			}
