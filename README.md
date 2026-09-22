@@ -4,7 +4,7 @@ Typed Go client for the [Nobitex API](https://apidocs.nobitex.ir) (`https://apiv
 
 Repository: https://github.com/MehrdadMiri/nobitex-sdk
 
-This module is the typed Go client for Tradex services: shared HTTP core (Token and API-key auth, `TraderBot/<name>-<version>` User-Agent, typed errors) plus **order book v3**, **system options / market precisions**, **margin order placement**, and **positions list + close**. Cancel lands in a follow-up ticket.
+This module is the typed Go client for Tradex services: shared HTTP core (Token and API-key auth, `TraderBot/<name>-<version>` User-Agent, typed errors) plus **order book v3**, **system options / market precisions**, **margin order placement**, **positions list + close**, **user orders list** (including the margin trade-type filter), and **cancel order**.
 
 ## Status
 
@@ -21,7 +21,8 @@ This module is the typed Go client for Tradex services: shared HTTP core (Token 
 | Place margin order (`POST /margin/orders/add`) | Done |
 | Positions list (`GET /positions/list`) | Done |
 | Close position (`POST /positions/:positionId/close`) | Done |
-| Cancel | **Out of scope** — follow-up PRs |
+| User orders list (`GET`/`POST /market/orders/list`, margin filter) | Done |
+| Cancel order (`POST /market/orders/update-status`) | Done |
 
 ## Install
 
@@ -103,6 +104,24 @@ func main() {
 	for _, o := range placed.PlacedOrders() {
 		log.Printf("margin order id=%d clientOrderId=%s", o.ID, o.ClientOrderIDValue())
 	}
+
+	// Authenticated READ: list margin orders (details=2 so ids are present).
+	listed, err := authed.ListMarginOrders(ctx, types.OrderListQuery{Details: types.OrderListDetailsFull})
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, o := range listed.Orders {
+		log.Printf("open margin order id=%d clientOrderId=%s", o.ID, o.ClientOrderIDValue())
+	}
+
+	// Authenticated TRADE: cancel by server id or by clientOrderId.
+	if len(listed.Orders) > 0 {
+		canceled, err := authed.CancelOrderByID(ctx, listed.Orders[0].ID)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("canceled id=%d status=%s", canceled.Order.ID, canceled.UpdatedStatus)
+	}
 }
 ```
 
@@ -138,7 +157,16 @@ Official docs: [authentication](https://apidocs.nobitex.ir) · [API key guide](h
 1. **Token** — `Authorization: Token <token>`. Use `client.WithToken` or `auth.NewTokenAuth`.
 2. **API key** — headers `Nobitex-Key`, `Nobitex-Signature`, `Nobitex-Timestamp`. Payload is `timestamp + METHOD + full_path + raw_body`, signed with Ed25519 (URL-safe Base64). Use `client.WithAPIKey` or `auth.NewAPIKeyAuth`.
 
-Keys that place or cancel orders need the **TRADE** permission. Timestamp must stay within ~30s of server time in production.
+API-key scopes (see [API key guide](https://apidocs.nobitex.ir/api_key/api-key-guide)):
+
+| Call | API-key permission |
+|------|--------------------|
+| `GET`/`POST /market/orders/list` | **READ** |
+| `POST /market/orders/update-status` (cancel) | **TRADE** |
+| `POST /margin/orders/add` | **TRADE** |
+| `GET /positions/list`, `POST /positions/:id/close` | **TRADE** |
+
+Keys that place, close, or **cancel** orders need the **TRADE** permission. Timestamp must stay within ~30s of server time in production. The client always sends `User-Agent` and applies Token (`Authorization: Token …`) and/or API-key signing (`Nobitex-Key` / `Nobitex-Signature` / `Nobitex-Timestamp`) from the shared HTTP core. Missing credentials fail before any network call on authenticated endpoints.
 
 ## User-Agent
 
@@ -215,14 +243,35 @@ list, err := c.ListPositions(ctx, types.PositionListQuery{
 closeResp, err := c.ClosePosition(ctx, 128, types.NewCloseLimitOrder("0.0100150225", "6200000000"))
 ```
 
+## User orders list + cancel
+
+Authenticated. Docs: https://apidocs.nobitex.ir · https://github.com/MehrdadMiri/nobitex-sdk
+
+- `Client.ListOrders(ctx, query)` — documented `GET /market/orders/list` (API-key **READ**, 30/min). Filters: `status` (`all`/`open`/`done`/`close`), `type`, `execution`, **`tradeType` (`spot`/`margin`)**, `srcCurrency`, `dstCurrency`, `details`, `fromId`, `order` (sort), `page`, `pageSize`. `page` and `fromId` cannot be combined.
+- `Client.ListMarginOrders(ctx, query)` — same GET with `tradeType=margin` (the P0 margin filter). Other query fields are kept.
+- `Client.ListOrdersPost` / `ListMarginOrdersPost` — POST the same filters as a JSON body (GET is the documented method).
+- Set `Details: types.OrderListDetailsFull` (`2`) so each row includes `id` / `status` / `fee` / `created_at` / `averagePrice` for later cancel.
+- `Client.CancelOrder(ctx, req)` — `POST /market/orders/update-status` with `status=canceled`. API-key **TRADE** (90/min). At least one of `order` (server id) or `clientOrderId` is required; if both are sent, `order` wins. Search by `clientOrderId` only covers open orders (`New` / `Active` / `Inactive`).
+- Helpers: `CancelOrderByID`, `CancelOrderByClientOrderID`, `types.NewCancelOrderByID`, `types.NewCancelOrderByClientOrderID`, `types.NewMarginOrderListQuery`.
+- All four list/cancel methods reuse the shared HTTP client (`User-Agent: TraderBot/<name>-<version>`, Token and/or API-key signing, typed errors). No authenticator → error, no HTTP call.
+
+```go
+listed, err := c.ListMarginOrders(ctx, types.OrderListQuery{
+	Status:  types.OrderListStatusOpen,
+	Details: types.OrderListDetailsFull,
+})
+_, err = c.CancelOrderByID(ctx, listed.Orders[0].ID)
+_, err = c.CancelOrderByClientOrderID(ctx, "my-order-123")
+```
+
 ## Package layout
 
 ```
 github.com/MehrdadMiri/nobitex-sdk
-├── client/   HTTP core, Do / DoJSON, OrderBook / OrderBookAll, SystemOptions, AddMarginOrder, ListPositions / ClosePosition
+├── client/   HTTP core, Do / DoJSON, OrderBook / OrderBookAll, SystemOptions, AddMarginOrder, ListPositions / ClosePosition, ListOrders / CancelOrder
 ├── auth/     Token header + API-key Ed25519 signer; env loader
 ├── errors/   Typed transport + API error model
-└── types/    Envelope / status / money / order-book / system options / decimal-step / margin-order / positions list+close
+└── types/    Envelope / status / money / order-book / system options / decimal-step / margin-order / positions list+close / user-order list+cancel
 ```
 
 Stdlib only (no third-party dependencies).
@@ -241,8 +290,8 @@ Stdlib only (no third-party dependencies).
 2. `POST /margin/orders/add` — limit / market / stop_limit / stop_market / oco (**done**)
 3. `GET /positions/list` (**done**)
 4. `POST /positions/:positionId/close` (**done**)
-5. `GET`/`POST /market/orders/list` (margin filter) — next
-6. `POST /market/orders/update-status` (cancel) — next
+5. `GET`/`POST /market/orders/list` (margin filter) (**done**)
+6. `POST /market/orders/update-status` (cancel by id or `clientOrderId`, TRADE) (**done**)
 7. `GET /v2/options` (`amountPrecisions`, `pricePrecisions`) (**done**)
 
 ## Tests
@@ -251,13 +300,12 @@ Stdlib only (no third-party dependencies).
 go test ./...
 ```
 
-Unit tests use `httptest` and recorded JSON fixtures. `TestOrderBookLivePublic` and `TestSystemOptionsLivePublic` optionally hit live public APIs (skipped with `-short`, and skipped if the network is down). Margin-order and positions list/close tests are fixture-only — **no authenticated live calls** and no real funds. No secrets in git.
+Unit tests use `httptest` and recorded JSON fixtures. `TestOrderBookLivePublic` and `TestSystemOptionsLivePublic` optionally hit live public APIs (skipped with `-short`, and skipped if the network is down). Margin-order, positions, user-orders list, and cancel tests are fixture-only — **no authenticated live calls** and no real funds. No secrets in git.
 
 ## Non-goals
 
 - Trading bot / strategy engine
 - Storing secrets in git
-- Cancel in this PR
 
 ## License / ownership
 

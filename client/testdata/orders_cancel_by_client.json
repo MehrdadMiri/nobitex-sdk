@@ -1,0 +1,25 @@
+{
+  "status": "ok",
+  "updatedStatus": "Canceled",
+  "order": {
+    "amount": "0.0123",
+    "averagePrice": "0",
+    "clientOrderId": "order1",
+    "created_at": "2020-07-15T11:32:38.326809+00:00",
+    "dstCurrency": "Tether",
+    "execution": "Limit",
+    "fee": "0",
+    "id": 173546223,
+    "market": "BTC-USDT",
+    "matchedAmount": "0",
+    "partial": false,
+    "price": "9750.01",
+    "srcCurrency": "Bitcoin",
+    "status": "Canceled",
+    "totalOrderPrice": "119.925123",
+    "totalPrice": "0",
+    "tradeType": "Margin",
+    "type": "sell",
+    "unmatchedAmount": "0.0123"
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "status": "failed",
+  "code": "UnAuthenticated",
+  "message": "Authentication credentials were not provided."
+}

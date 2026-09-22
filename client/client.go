@@ -2,8 +2,8 @@
 //
 // It owns base URL, User-Agent, auth application, and error mapping. Typed
 // endpoint methods call DoJSON / Do. Order book v3, SystemOptions
-// (GET /v2/options), margin order placement, and positions list/close
-// are implemented here; cancel lands in a follow-up ticket.
+// (GET /v2/options), margin order placement, positions list/close, user
+// orders list, and cancel are implemented here.
 package client
 
 import (
@@ -286,6 +286,18 @@ func (c *Client) joinURL(path string) (*url.URL, error) {
 	u.RawQuery = rel.RawQuery
 	u.Fragment = rel.Fragment
 	return &u, nil
+}
+
+// requireAuth fails fast when no Token or API-key authenticator is configured.
+// permission is the documented API-key scope for the endpoint (READ or TRADE).
+func (c *Client) requireAuth(op, permission string) error {
+	if c == nil {
+		return fmt.Errorf("client: not initialized")
+	}
+	if c.Auth() == nil {
+		return fmt.Errorf("client: %s requires Token or API-key (%s) authentication", op, permission)
+	}
+	return nil
 }
 
 func (c *Client) setBaseURL(raw string) error {
