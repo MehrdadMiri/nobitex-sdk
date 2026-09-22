@@ -4,7 +4,7 @@ Typed Go client for the [Nobitex API](https://apidocs.nobitex.ir) (`https://apiv
 
 Repository: https://github.com/MehrdadMiri/nobitex-sdk
 
-This module is the typed Go client for Tradex services: shared HTTP core (Token and API-key auth, `TraderBot/<name>-<version>` User-Agent, typed errors) plus **order book v3** and **system options / market precisions**. Margin orders, positions, and cancel land in follow-up tickets.
+This module is the typed Go client for Tradex services: shared HTTP core (Token and API-key auth, `TraderBot/<name>-<version>` User-Agent, typed errors) plus **order book v3**, **system options / market precisions**, and **margin order placement**. Positions and cancel land in follow-up tickets.
 
 ## Status
 
@@ -18,7 +18,8 @@ This module is the typed Go client for Tradex services: shared HTTP core (Token 
 | Env/config secrets (nothing hardcoded) | Done |
 | Order book v3 (`GET /v3/orderbook/:symbol`, including `all`) | Done |
 | System options / market precisions (`GET /v2/options`) | Done |
-| Margin / positions / cancel | **Out of scope** — follow-up PRs |
+| Place margin order (`POST /margin/orders/add`) | Done |
+| Positions / cancel | **Out of scope** — follow-up PRs |
 
 ## Install
 
@@ -36,8 +37,10 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 
 	"github.com/MehrdadMiri/nobitex-sdk/client"
+	"github.com/MehrdadMiri/nobitex-sdk/types"
 )
 
 func main() {
@@ -79,6 +82,24 @@ func main() {
 	log.Printf("BTCIRT amount step=%s price step=%s", amount, price)
 	if err := opts.ValidateOrderDecimals("BTCIRT", "0.001", "35650565900"); err != nil {
 		log.Fatal(err)
+	}
+
+	// Authenticated: Token header (or API-key TRADE signing). Load secrets from env.
+	authed, err := client.New(
+		client.WithApp("MyBot", "1.0.0"),
+		client.WithToken(os.Getenv("NOBITEX_TOKEN")),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	placed, err := authed.AddMarginOrder(ctx, types.NewMarginLimitOrder(
+		types.OrderSideSell, "btc", "usdt", "0.01", "13400000000",
+	))
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, o := range placed.PlacedOrders() {
+		log.Printf("margin order id=%d clientOrderId=%s", o.ID, o.ClientOrderIDValue())
 	}
 }
 ```
@@ -159,14 +180,31 @@ Public `GET /v2/options` (no token). Docs: https://apidocs.nobitex.ir/options/ge
 - Response exposes `nobitex.amountPrecisions` and `nobitex.pricePrecisions` (smallest allowed amount / price increment per market, e.g. BTCIRT).
 - Helpers for later order-placement code: `AmountPrecision` / `PricePrecision`, `ValidateAmount` / `ValidatePrice` / `ValidateOrderDecimals`, and `Money.FitsStep` / `TruncateToStep`.
 
+## Place margin order
+
+Authenticated `POST /margin/orders/add` (Token header, or API-key with **TRADE**). Docs: https://apidocs.nobitex.ir · https://apidocs.nobitex.ir/margin_trade/%D8%AF%D8%B1%D8%AC-%D8%B3%D9%81%D8%A7%D8%B1%D8%B4-%D8%AA%D8%B9%D9%87%D8%AF%DB%8C
+
+- `Client.AddMarginOrder(ctx, req)` — reuses the shared client (User-Agent, Token / API-key signing, typed errors). Fails client-side if no authenticator is configured.
+- Request executions: `limit`, `market`, `stop_limit`, `stop_market`, and `oco`. OCO is sent as `execution=limit` + `mode=oco` (or set `Execution: types.ExecutionOCO` and `Prepare` rewrites it).
+- Helpers: `types.NewMarginLimitOrder`, `NewMarginMarketOrder`, `NewMarginStopLimitOrder`, `NewMarginStopMarketOrder`, `NewMarginOCOOrder`. Optional `Leverage` and `ClientOrderID` can be set on the struct.
+- Response identifiers for later cancel/list: `order.id` / `order.clientOrderId` (single), or both legs plus `pairId` for OCO (`resp.PlacedOrders()`, `resp.OrderIDs()`).
+- Rate limit: 300 requests / 10 minutes, shared with spot placement.
+
+```go
+req := types.NewMarginStopLimitOrder(types.OrderSideSell, "btc", "usdt", "0.01", "12500000000", "12600000000")
+req.Leverage = "2"
+req.ClientOrderID = "my-order-123"
+resp, err := c.AddMarginOrder(ctx, req)
+```
+
 ## Package layout
 
 ```
 github.com/MehrdadMiri/nobitex-sdk
-├── client/   HTTP core, Do / DoJSON, OrderBook / OrderBookAll, SystemOptions
+├── client/   HTTP core, Do / DoJSON, OrderBook / OrderBookAll, SystemOptions, AddMarginOrder
 ├── auth/     Token header + API-key Ed25519 signer; env loader
 ├── errors/   Typed transport + API error model
-└── types/    Envelope / status / money / order-book / system options / decimal-step helpers
+└── types/    Envelope / status / money / order-book / system options / decimal-step / margin-order shapes
 ```
 
 Stdlib only (no third-party dependencies).
@@ -182,7 +220,7 @@ Stdlib only (no third-party dependencies).
 ## P0 endpoints
 
 1. `GET /v3/orderbook/:symbol` — including `symbol=all` (**done**)
-2. `POST /margin/orders/add` — next
+2. `POST /margin/orders/add` — limit / market / stop_limit / stop_market / oco (**done**)
 3. `GET /positions/list` — next
 4. `POST /positions/:positionId/close` — next
 5. `GET`/`POST /market/orders/list` (margin filter) — next
@@ -195,13 +233,13 @@ Stdlib only (no third-party dependencies).
 go test ./...
 ```
 
-Unit tests use `httptest` and recorded JSON fixtures. `TestOrderBookLivePublic` and `TestSystemOptionsLivePublic` optionally hit live public APIs (skipped with `-short`, and skipped if the network is down). No authenticated live calls; no secrets in git.
+Unit tests use `httptest` and recorded JSON fixtures. `TestOrderBookLivePublic` and `TestSystemOptionsLivePublic` optionally hit live public APIs (skipped with `-short`, and skipped if the network is down). Margin-order tests are fixture-only — **no authenticated live calls** and no real funds. No secrets in git.
 
 ## Non-goals
 
 - Trading bot / strategy engine
 - Storing secrets in git
-- Margin / positions / cancel in this PR
+- Positions / cancel in this PR
 
 ## License / ownership
 

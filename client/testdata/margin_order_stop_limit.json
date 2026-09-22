@@ -1,0 +1,26 @@
+{
+  "status": "ok",
+  "order": {
+    "id": 52,
+    "type": "sell",
+    "execution": "StopLimit",
+    "tradeType": "Margin",
+    "srcCurrency": "btc",
+    "dstCurrency": "usdt",
+    "price": "12500000000",
+    "amount": "0.01",
+    "status": "Inactive",
+    "totalPrice": "0",
+    "totalOrderPrice": "125000000",
+    "matchedAmount": "0",
+    "unmatchedAmount": "0.01",
+    "clientOrderId": "stop-limit-1",
+    "param1": "12600000000",
+    "leverage": "2",
+    "side": "open",
+    "partial": false,
+    "fee": "0",
+    "created_at": "2022-10-20T11:36:13.592827+00:00",
+    "averagePrice": "0"
+  }
+}

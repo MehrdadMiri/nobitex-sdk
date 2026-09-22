@@ -1,9 +1,9 @@
 // Package client is the HTTP core for the Nobitex SDK.
 //
 // It owns base URL, User-Agent, auth application, and error mapping. Typed
-// endpoint methods call DoJSON / Do. Order book v3 and SystemOptions
-// (GET /v2/options) are implemented here; margin, positions, and cancel
-// land in follow-up tickets.
+// endpoint methods call DoJSON / Do. Order book v3, SystemOptions
+// (GET /v2/options), and margin order placement are implemented here;
+// positions and cancel land in follow-up tickets.
 package client
 
 import (
